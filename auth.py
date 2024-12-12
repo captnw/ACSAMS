@@ -5,10 +5,17 @@ from pydantic import ValidationError
 from config import ALGORITHM, SECRET_KEY
 from models import User  
 from jose import JWTError, jwt  
-from datetime import datetime, timedelta, timezone  
-from data import refresh_tokens, fake_users_db
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Union  
 from fastapi import Depends, HTTPException, status
+
+from mongo_driver import get_user_from_MongoDB
+
+"""
+auth.py
+
+Responsible for Role base access control with JWT
+"""
 
 # Global variables
 # Initialize logger (use the logger instead of print for debugging)
@@ -18,29 +25,28 @@ logger.setLevel(logging.DEBUG)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")  
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")  
 
-def get_user(db, username: str) -> Union[User,None]:  
+refresh_tokens = set()
+
+async def authenticate_user(username: str, password: str) -> Union[User, bool]:   
     """
-    Given a db and a username, fetches user information from the db and return a 
+    Authenticate a user against the MongoDB database
     """
-    for user in db:
-        if username in user["username"]:  
-            return User(**user)  
-  
-def authenticate_user(fake_db, username: str, password: str):   
-    """
-    Authenticate a user against a database
-    """
-    user = get_user(fake_db, username)  
+    user = await get_user_from_MongoDB(username)  
     if not user:  
         return False  
     
-    print("Password check would be here",username,password,user.hashed_password)
+    logger.debug(f"Checking password for user: {username}")
 
-    #if not pwd_context.verify(plain_password, hashed_password):  
-    #    return False  
+    if user.password != password:
+        logger.error(f"Password mismatch")
+        return False
+    logger.debug(f"Password matches")
     return user  
 
-def create_token(data: dict, expires_delta: timedelta = timedelta(minutes=15)):  
+def create_token(data: dict, expires_delta: timedelta = timedelta(minutes=15)):
+    """
+    Helper method used for creating the accessa and refresh token
+    """
     to_encode = data.copy()  
     expire = datetime.now(timezone.utc) + expires_delta  
     to_encode.update({"exp": expire})  
@@ -48,6 +54,9 @@ def create_token(data: dict, expires_delta: timedelta = timedelta(minutes=15)):
     return encoded_jwt
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):  
+    """
+    Get the current user that is signed in via FastAPI's OAuth2PasswordBearer
+    """
     credentials_exception = HTTPException(  
         status_code=status.HTTP_401_UNAUTHORIZED,  
         detail="Could not validate credentials",  
@@ -60,22 +69,24 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
             raise credentials_exception  
     except JWTError:  
         raise credentials_exception  
-    user = get_user(fake_users_db, username=username)  
+    user = await get_user_from_MongoDB(username)  
     if user is None:  
         raise credentials_exception  
     return user  
-  
-async def get_current_active_user( current_user: Annotated[User, Depends(get_current_user)]):
-    return current_user  
 
-class RoleChecker:  
+class CheckedRoleIs:  
     """
     Checks if a user is part of the allowed roles, return True if this is case, False otherwise
+
+    Responsible for protecting an endpoint.
     """
     def __init__(self, allowed_roles):  
         self.allowed_roles = allowed_roles  
 
-    def __call__(self, user: Annotated[User, Depends(get_current_active_user)]):  
+    def __call__(self, user: Annotated[User, Depends(get_current_user)]):  
+        """
+        Allows this class to be called like a method, so Depends will work for this class and we can create a protected endpoint
+        """
         if user.role in self.allowed_roles:  
             return True  
         raise HTTPException(  
@@ -99,7 +110,7 @@ async def validate_refresh_token(token: Annotated[str, Depends(oauth2_scheme)]):
         logger.debug(f"some weird error???")
         raise credentials_exception  
   
-    user = get_user(fake_users_db, username=username)  
+    user = await get_user_from_MongoDB(username)  
   
     if user is None:  
         raise credentials_exception  

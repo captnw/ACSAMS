@@ -3,10 +3,9 @@ import logging
 from typing import Annotated 
 
 from fastapi import Depends, FastAPI, HTTPException  
-from fastapi.security import OAuth2PasswordRequestForm  
+from fastapi.security import OAuth2PasswordRequestForm
   
-from auth import create_token, authenticate_user, RoleChecker, validate_refresh_token  
-from data import fake_users_db, refresh_tokens
+from auth import create_token, authenticate_user, CheckedRoleIs, validate_refresh_token, refresh_tokens
 from models import User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
 
@@ -39,7 +38,7 @@ def get_data():
   return {"data": "This is important data"} 
 
 @app.get("/realdata")  
-def get_real_data(_: Annotated[bool, Depends(RoleChecker(allowed_roles=["admin"]))]):  
+def get_real_data(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))]):  
   """
   Example FASTAPI endpoint with authentication, you need to sign in with admin user before interacting with API
   """
@@ -50,7 +49,7 @@ async def login_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Dep
   """
   Login with username and password to receive an access and refresh token
   """
-  user = authenticate_user(fake_users_db, form_data.username, form_data.password)  
+  user = await authenticate_user(form_data.username, form_data.password)  
   if not user:  
     raise HTTPException(status_code=400, detail="Incorrect username or password")  
   
