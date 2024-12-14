@@ -13,7 +13,10 @@ William Nguyen, Randell Lapid, and Fabrizio Mejia
 2. Install packages from requirements.txt
 3. Create new mongodb connection with URI (see config.ini file in root; MONGODB_URL value)
 4. Create new mongodb database with name (see config.ini file in root; MONGODB_DATABASE value)
-5. Create new collection in database called 'users'
+5. Create the following collections in database:
+   - 'users'
+   - 'permissions'
+   - 'plans'
 6. Go to sample and import the .json file into the same collection above
 7. Run `uvicorn app:app --reload`
 
