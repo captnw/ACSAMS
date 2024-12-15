@@ -6,9 +6,10 @@ from fastapi import Depends, FastAPI, HTTPException, Body, status
 from fastapi.security import OAuth2PasswordRequestForm
   
 from auth import create_token, authenticate_user, CheckedRoleIs, validate_refresh_token, refresh_tokens
-from models import APIPermission, User, Token  
+from models import APIPermission, UpdateAPIPermission, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB
+from mongo_driver import add_permission_to_MongoDB, modify_permission_to_MongoDB
+from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
 logger = logging.getLogger('uvicorn.error')
@@ -92,14 +93,15 @@ async def add_permission(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=
   await add_permission_to_MongoDB(permission)
   return f"Created API {permission}"
 
-# @app.put("/permissions",
-#           response_description="Add API permission",
-#           status_code=status.HTTP_201_CREATED)
-# async def add_permission(permission : Annotated[APIPermission, Depends(CheckedRoleIs(allowed_roles=["admin"]))] = Body(...)):
-#   """
-#   Insert a new API permission
-#   """
-#   await add_permission_to_MongoDB(permission)
+@app.put("/permissions/{permissionId}",
+          response_description="Modify API permission",
+          status_code=status.HTTP_200_OK)
+async def modify_permission(permissionID : str, _ : Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))] = Body(...), permission : UpdateAPIPermission = Body(...)):
+  """
+  Update an existing API permission
+  """
+  await modify_permission_to_MongoDB(permissionID, permission)
+  return f"Updated API {permission}"
 
 
 # Random APIs

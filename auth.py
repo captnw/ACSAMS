@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Union  
 from fastapi import Depends, HTTPException, status
 
-from mongo_driver import get_user_from_MongoDB
+from mongo_driver import get_user_by_name_from_MongoDB
 
 """
 auth.py
@@ -31,7 +31,7 @@ async def authenticate_user(username: str, password: str) -> Union[User, bool]:
     """
     Authenticate a user against the MongoDB database
     """
-    user = await get_user_from_MongoDB(username)  
+    user = await get_user_by_name_from_MongoDB(username)  
     if not user:  
         return False  
     
@@ -69,7 +69,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
             raise credentials_exception  
     except JWTError:  
         raise credentials_exception  
-    user = await get_user_from_MongoDB(username)  
+    user = await get_user_by_name_from_MongoDB(username)  
     if user is None:  
         raise credentials_exception  
     return user  
@@ -110,7 +110,7 @@ async def validate_refresh_token(token: Annotated[str, Depends(oauth2_scheme)]):
         logger.debug(f"some weird error???")
         raise credentials_exception  
   
-    user = await get_user_from_MongoDB(username)  
+    user = await get_user_by_name_from_MongoDB(username)  
   
     if user is None:  
         raise credentials_exception  
