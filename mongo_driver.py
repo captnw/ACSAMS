@@ -4,7 +4,7 @@ import motor.motor_asyncio
 from bson import ObjectId
 from config import MONGODB_DATABASE, MONGODB_URL
 from models import UpdateAPIPermission, User, APIPermission
-from fastapi import HTTPException
+from fastapi import HTTPException, Response, status
 from pymongo import ReturnDocument
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -29,7 +29,6 @@ async def get_user_by_name_from_MongoDB(username: str) -> Union[User,None]:
     results = await user_collection.find_one({"username":username})
     if results is None:
         return
-    logger.debug(results)
     return User(**results)
 
 async def get_user_by_id_from_MongoDB(id: str) -> Union[User,None]:  
@@ -86,6 +85,19 @@ async def modify_permission_to_MongoDB(id : str, permission: UpdateAPIPermission
 
     if update_result is None:
         raise HTTPException(status_code=500, detail=f"Unable to update permission with id {permission.id} with new values {permission}")
+
+async def delete_permission_in_MongoDB(id : str):
+    """
+    Delete the APIPermission in MongoDB
+    """
+    delete_result = await permissions_collection.delete_one({"_id": ObjectId(id)})
+
+    if delete_result.deleted_count == 1:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    raise HTTPException(status_code=404, detail=f"API Permission {id} not found")
+
+    # FUTURE: add check to prevent deleting permission IF it is in use by a plan; prevent deleting plan if it is in use by a customer
 
 async def get_permission_from_MongoDB(name: str) -> Union[APIPermission, None]:
     """

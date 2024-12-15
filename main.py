@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from auth import create_token, authenticate_user, CheckedRoleIs, validate_refresh_token, refresh_tokens
 from models import APIPermission, UpdateAPIPermission, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB, modify_permission_to_MongoDB
+from mongo_driver import add_permission_to_MongoDB, delete_permission_in_MongoDB, modify_permission_to_MongoDB
 from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -103,6 +103,15 @@ async def modify_permission(permissionID : str, _ : Annotated[bool, Depends(Chec
   await modify_permission_to_MongoDB(permissionID, permission)
   return f"Updated API {permission}"
 
+@app.delete("/permissions/{permissionId}",
+          response_description="Delete API permission",
+          status_code=status.HTTP_200_OK)
+async def delete_permission(permissionID : str, _ : Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))] = Body(...)):
+  """
+  Update an existing API permission
+  """
+  await delete_permission_in_MongoDB(permissionID)
+  return f"Deleted API {permissionID}"
 
 # Random APIs
 
