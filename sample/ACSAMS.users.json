@@ -13,4 +13,12 @@
   "username": "user",
   "role": "user",
   "password": "userpass"
+},
+{
+  "_id": {
+    "$oid": "675f44fbe93a6068120d590b"
+  },
+  "username": "user2",
+  "role": "user",
+  "password": "user2pass"
 }]

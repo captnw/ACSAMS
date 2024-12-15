@@ -25,27 +25,34 @@ app = FastAPI(
 access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  
 refresh_token_expires = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)  
 
-# Test endpoints (just to test RBAC)
-@app.get("/hello")  
-def hello_func():  
+# RBAC demonstration endpoints
+@app.get("/publiconly")  
+def public_only():  
   """
-  Example FASTAPI endpoint #1
+  Endpoint that can be accessed by everyone
   """
-  return "Hello World, you can access this without signing in"  
+  return "This endpoint can be used by everyone"  
 
-@app.get("/data")  
-def get_data(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
+@app.get("/useronly")  
+def user_only(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
-  Example FASTAPI endpoint #2
+  Endpoint that can be accessed by users
   """
   return {"data": "This is important data, need to sign in with a user role"} 
 
-@app.get("/realdata")  
-def get_real_data(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))]):  
+@app.get("/adminonly")  
+def admin_only(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))]):  
   """
-  Example FASTAPI endpoint with authentication, you need to sign in with admin user before interacting with API
+  Endpoint that can be accessed by admin
   """
   return {"data": "This is REALLY important data, need to sign in with an admin role"}
+
+@app.get("/useroradmin")  
+def user_or_admin(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user","admin"]))]):  
+  """
+  Endpoint that can be accessed by users OR admins
+  """
+  return {"data": "This is semi important data, need to sign in with an user or admin role"}
 
 @app.post("/token",response_description="Login with username and password and get access and refresh tokens")  
 async def login_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:  
@@ -81,7 +88,7 @@ async def refresh_access_token(token_data: Annotated[tuple[User, str], Depends(v
   refresh_tokens.add(refresh_token)  
   return Token(access_token=access_token, refresh_token=refresh_token)
 
-# Permissions
+# Permissions endpoints
 
 @app.post("/permissions",
           response_description="Add API permission",
@@ -113,7 +120,8 @@ async def delete_permission(permissionId : str, _ : Annotated[bool, Depends(Chec
   await delete_permission_in_MongoDB(permissionId)
   return f"Deleted API {permissionId}"
 
-# Plans
+# Plans endpoints
+
 @app.post("/plans",
           response_description="Add plan",
           status_code=status.HTTP_201_CREATED)
@@ -144,7 +152,7 @@ async def delete_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(all
   await delete_plan_in_MongoDB(planId)
   return f"Deleted Plan {planId}"
 
-# Random APIs
+# Random APIs (these don't do anything other than be monitored for usage)
 
 @app.get("/random1",response_description="GET random endpoint 1")  
 def get_random_1():  

@@ -16,7 +16,9 @@ class User(BaseModel):
   username: str = Field(...)
   role: str = Field(...)
   password: str = Field(...) # This is a simple application, you can go hash this yourself
-  
+  subscribed_plan_id: Optional[str] = Field(default=None)
+  current_api_usage : Optional[Dict[PyObjectId, Annotated[int, Field(ge=0)]]] = Field(default=None)
+
 class Token(BaseModel):
   """
   Used with FastAPI's OAuth2PasswordRequestForm 
