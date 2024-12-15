@@ -103,14 +103,18 @@ async def delete_permission_in_MongoDB(id : str):
     """
     Delete the APIPermission in MongoDB
     """
+    # check if permission is being used by any existing plan and stop update if it is being used
+    used_by_existing_plan = await plans_collection.find_one({ f"apilimit.{ObjectId(id)}": {"$exists": True}})
+    if used_by_existing_plan:
+        existing_plan = APIPlan(**used_by_existing_plan)
+        raise HTTPException(status_code=400, detail=f"Permission with object id {id} exist and is used in plan {existing_plan.id}")
+
     delete_result = await permissions_collection.delete_one({"_id": ObjectId(id)})
 
     if delete_result.deleted_count == 1:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     raise HTTPException(status_code=404, detail=f"API Permission {id} not found")
-
-    # add check to prevent deleting permission IF it is in use by a plan
 
 async def get_permission_from_MongoDB(name: str) -> Union[APIPermission, None]:
     """
@@ -174,3 +178,14 @@ async def modify_plan_to_MongoDB(id : str, plan: UpdateAPIPlan):
 
     if update_result is None:
         raise HTTPException(status_code=500, detail=f"Unable to update plan with id {id} with new values {plan}")
+
+async def delete_plan_in_MongoDB(id : str):
+    """
+    Delete the APIPlan in MongoDB
+    """
+    # check if plan is being used by any existing user and stop update if it is being used (TODO: WORK IN PROGRESS)
+    delete_result = await plans_collection.delete_one({"_id": ObjectId(id)})
+    if delete_result.deleted_count == 1:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    raise HTTPException(status_code=404, detail=f"API Permission {id} not found")

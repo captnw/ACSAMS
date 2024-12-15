@@ -24,3 +24,4 @@ Note: credentials are in sample/ACAMS.user.json, they are plain-text because thi
 
 # To see API docs
 1. Navigate to `http://127.0.0.1:8000/docs` while app is running
+Note: all references to ids are MongoDB ids

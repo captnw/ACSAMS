@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from auth import create_token, authenticate_user, CheckedRoleIs, validate_refresh_token, refresh_tokens
 from models import APIPermission, APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB
+from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB
 from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -121,20 +121,28 @@ async def add_plan(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admi
   """
   Insert a new API permission
   """
-  logger.debug(plan)
   await add_plan_to_MongoDB(plan)
   return f"Created Plan {plan}"
 
 @app.put("/plans/{planId}",
           response_description="Modify plan",
-          status_code=status.HTTP_201_CREATED)
+          status_code=status.HTTP_200_OK)
 async def modify_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))], plan : UpdateAPIPlan = Body(...)):
   """
   Insert a new API permission
   """
-  logger.debug(plan)
   await modify_plan_to_MongoDB(planId, plan)
   return f"Updated Plan {plan}"
+
+@app.delete("/plans/{planId}",
+          response_description="Delete plan",
+          status_code=status.HTTP_200_OK)
+async def delete_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))]):
+  """
+  Insert a new API permission
+  """
+  await delete_plan_in_MongoDB(planId)
+  return f"Deleted Plan {planId}"
 
 # Random APIs
 
