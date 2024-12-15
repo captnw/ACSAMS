@@ -6,9 +6,9 @@ from fastapi import Depends, FastAPI, HTTPException, Body, status
 from fastapi.security import OAuth2PasswordRequestForm
   
 from auth import create_token, authenticate_user, CheckedRoleIs, validate_refresh_token, refresh_tokens
-from models import APIPermission, UpdateAPIPermission, User, Token  
+from models import APIPermission, APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB, delete_permission_in_MongoDB, modify_permission_to_MongoDB
+from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB
 from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -32,7 +32,7 @@ def hello_func():
   Example FASTAPI endpoint #1
   """
   return "Hello World, you can access this without signing in"  
-  
+
 @app.get("/data")  
 def get_data(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
@@ -96,22 +96,45 @@ async def add_permission(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=
 @app.put("/permissions/{permissionId}",
           response_description="Modify API permission",
           status_code=status.HTTP_200_OK)
-async def modify_permission(permissionID : str, _ : Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))] = Body(...), permission : UpdateAPIPermission = Body(...)):
+async def modify_permission(permissionId : str, _ : Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))] = Body(...), permission : UpdateAPIPermission = Body(...)):
   """
   Update an existing API permission
   """
-  await modify_permission_to_MongoDB(permissionID, permission)
+  await modify_permission_to_MongoDB(permissionId, permission)
   return f"Updated API {permission}"
 
 @app.delete("/permissions/{permissionId}",
           response_description="Delete API permission",
           status_code=status.HTTP_200_OK)
-async def delete_permission(permissionID : str, _ : Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))] = Body(...)):
+async def delete_permission(permissionId : str, _ : Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))] = Body(...)):
   """
   Update an existing API permission
   """
-  await delete_permission_in_MongoDB(permissionID)
-  return f"Deleted API {permissionID}"
+  await delete_permission_in_MongoDB(permissionId)
+  return f"Deleted API {permissionId}"
+
+# Plans
+@app.post("/plans",
+          response_description="Add plan",
+          status_code=status.HTTP_201_CREATED)
+async def add_plan(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))], plan : APIPlan = Body(...)):
+  """
+  Insert a new API permission
+  """
+  logger.debug(plan)
+  await add_plan_to_MongoDB(plan)
+  return f"Created Plan {plan}"
+
+@app.put("/plans/{planId}",
+          response_description="Modify plan",
+          status_code=status.HTTP_201_CREATED)
+async def modify_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))], plan : UpdateAPIPlan = Body(...)):
+  """
+  Insert a new API permission
+  """
+  logger.debug(plan)
+  await modify_plan_to_MongoDB(planId, plan)
+  return f"Updated Plan {plan}"
 
 # Random APIs
 

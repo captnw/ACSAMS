@@ -1,5 +1,5 @@
-from typing import Annotated, Optional
-from pydantic import BaseModel, BeforeValidator, Field  
+from typing import Annotated, Dict, Optional
+from pydantic import BaseModel, BeforeValidator, Field
 from plans import API_Endpoint_Enum
 
 # Define all models to be used in MongoDB
@@ -26,11 +26,20 @@ class Token(BaseModel):
 
 class APIPermission(BaseModel):
   id: Optional[PyObjectId] = Field(alias="_id", default=None)
-  name: str = Field(...)
-  endpoint: API_Endpoint_Enum = Field(...)
-  description: str = Field(...)
+  name: str = Field(default="RandomAPI1", validate_default=True)
+  endpoint: API_Endpoint_Enum = Field(default=API_Endpoint_Enum.random1, validate_default=True)
+  description: str = Field(default="RandomAPI1 description", validate_default=True)
 
 class UpdateAPIPermission(BaseModel):
-  name: str = Field(...)
-  endpoint: API_Endpoint_Enum = Field(...)
-  description: str = Field(...)
+  name: str = Field(default="RandomAPI1", validate_default=True)
+  endpoint: API_Endpoint_Enum = Field(default=API_Endpoint_Enum.random1, validate_default=True)
+  description: str = Field(default="RandomAPI1 description", validate_default=True)
+
+class APIPlan(BaseModel):
+  id: Optional[PyObjectId] = Field(alias="_id", default=None)
+  name: str = Field(default="RandomAPIPlan1", validate_default=True)
+  apilimit : Dict[PyObjectId, Annotated[int, Field(gt=0)]] = Field(default={"permissionId":10}, validate_default=True)
+
+class UpdateAPIPlan(BaseModel):
+  name: str = Field(default="RandomAPIPlan1", validate_default=True)
+  apilimit : Dict[PyObjectId, Annotated[int, Field(gt=0)]] = Field(default={"permissionId":10}, validate_default=True)
