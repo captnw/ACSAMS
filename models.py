@@ -1,6 +1,6 @@
 from typing import Annotated, Dict, Optional
 from pydantic import BaseModel, BeforeValidator, Field
-from plans import API_Endpoint_Enum
+from endpoint import API_Endpoint_Enum
 
 # Define all models to be used in MongoDB
 
