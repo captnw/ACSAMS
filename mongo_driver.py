@@ -4,6 +4,7 @@ import motor.motor_asyncio
 from bson import ObjectId
 from bson.errors import InvalidId
 from config import MONGODB_DATABASE, MONGODB_URL
+from endpoint import API_Endpoint_Enum
 from models import APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, APIPermission
 from fastapi import HTTPException, Response, status
 from pymongo import ReturnDocument
@@ -60,12 +61,21 @@ async def get_user_by_id_from_MongoDB(id: str) -> Union[User,None]:
 
 # Permission methods
 
+async def get_permission_by_endpoint_from_MongoDB(endpoint : API_Endpoint_Enum) -> Union[APIPermission, None]:
+    """
+    Given a permission name, fetches APIPermission information from the db and return a APIPermission or None if the permission name doesn't exist
+    """
+    permission = await permissions_collection.find_one({"endpoint":endpoint.value})
+    if permission is None:
+        return
+    return APIPermission(**permission)
+
 async def add_permission_to_MongoDB(permission: APIPermission):
     """
     Add the APIPermission to MongoDB
     """
     # check if API already exists
-    existing_API = await permissions_collection.find_one({"endpoint":permission.endpoint.value})
+    existing_API = await get_permission_by_endpoint_from_MongoDB(permission.endpoint)
     if existing_API:
         raise HTTPException(status_code=400, detail=f"Endpoint {permission} already exists in a permission")
     
@@ -94,7 +104,7 @@ async def modify_permission_to_MongoDB(id : str, permission: UpdateAPIPermission
         # There is a change to the endpoint value
         # We need to check if the new endpoint isn't being used by some existing permission
         # Simple check: count the number of permissions with endpoint as the new endpoint and ensure it is 0
-        existing_API = await permissions_collection.find_one({"endpoint":permission.endpoint.value})
+        existing_API = await get_permission_by_endpoint_from_MongoDB(permission.endpoint)
         if existing_API:
             raise HTTPException(status_code=400, detail=f"Endpoint {permission} already exists in a permission")
     
@@ -160,12 +170,18 @@ async def add_plan_to_MongoDB(plan: APIPlan):
     plan_dump = plan.model_dump(by_alias=True, exclude=["id"])
     await plans_collection.insert_one(plan_dump)
 
+async def get_plan_by_id_MongoDB(id: str) -> Union[APIPlan, None]:
+    existing_plan = await plans_collection.find_one({"_id":trycastobjectId(id)})
+    if not existing_plan:
+        raise HTTPException(status_code=400, detail=f"No plan with object id {existing_plan} exist")
+    return APIPlan(**existing_plan)
+
 async def modify_plan_to_MongoDB(id : str, plan: UpdateAPIPlan):
     """
     Modify the APIPermission to MongoDB
     """
     # check if ID already exists
-    existing_plan = await plans_collection.find_one({"_id":trycastobjectId(id)})
+    existing_plan = await get_plan_by_id_MongoDB(id)
     if not existing_plan:
         raise HTTPException(status_code=400, detail=f"No plan with object id {existing_plan} exist")
     
@@ -219,7 +235,7 @@ async def subscribe_to_plan_in_MongoDB(plan_id : str, user : User):
     Subscribe to plan in MongoDB by updating the user
     """
     # check if plan is valid
-    existing_plan = await plans_collection.find_one({"_id":trycastobjectId(plan_id)})
+    existing_plan = await get_plan_by_id_MongoDB(plan_id)
     if not existing_plan:
         raise HTTPException(status_code=400, detail=f"No plan with object id {plan_id} exist")
 
@@ -229,7 +245,6 @@ async def subscribe_to_plan_in_MongoDB(plan_id : str, user : User):
         raise HTTPException(status_code=400, detail=f"No user with object id {user.id} exist")
     
     user.subscribed_plan_id = plan_id
-    existing_plan = APIPlan(**existing_plan)
 
     # set the usage to 0
     user.current_api_usage = {plan_id:0 for plan_id,_ in existing_plan.apilimit.items()}
@@ -258,10 +273,10 @@ async def view_plan_details_from_user_in_MongoDB(userId : str) -> str:
         raise HTTPException(status_code=400, detail=f"User with object id {userId} is an Admin and cannot subscribe to plans!")
 
     # check if plan is valid
-    existing_plan = await plans_collection.find_one({"_id":trycastobjectId(user.subscribed_plan_id)}) if user.subscribed_plan_id else None
+    existing_plan = await get_plan_by_id_MongoDB(user.subscribed_plan_id) if user.subscribed_plan_id else None
     if not existing_plan:
         raise HTTPException(status_code=400, detail=f"User id {userId} doesn't have a subscribed plan")
-    plan = APIPlan(**existing_plan)
+    plan = existing_plan
 
     output = "User (id: {0}) {1}; role: {2}".format(user.id, user.username, user.role)
     output += "\nSubscribed to plan (id: {0}) {1}".format(user.subscribed_plan_id, plan.name)
@@ -289,10 +304,10 @@ async def view_usage_statistics_from_user_in_MongoDB(userId : str) -> str:
         raise HTTPException(status_code=400, detail=f"User with object id {userId} is an Admin and cannot subscribe to plans!")
 
     # check if plan is valid
-    existing_plan = await plans_collection.find_one({"_id":trycastobjectId(user.subscribed_plan_id)}) if user.subscribed_plan_id else None
+    existing_plan = await get_plan_by_id_MongoDB(user.subscribed_plan_id) if user.subscribed_plan_id else None
     if not existing_plan:
         raise HTTPException(status_code=400, detail=f"User id {userId} doesn't have a subscribed plan")
-    plan = APIPlan(**existing_plan)
+    plan = existing_plan
 
     # fetch statistics details
     output = "User (id: {0}) {1}; role: {2}".format(user.id, user.username, user.role)
