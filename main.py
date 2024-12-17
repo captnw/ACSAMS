@@ -199,6 +199,20 @@ async def update_user_plan(userId: str, _: Annotated[bool, Depends(CheckedRoleIs
   details = await update_user_API_plan(userId, planId, newUsage)
   return f"{details}"
 
+# Note:
+# GET /access/{userId}/{apiRequest} (Check Access Permission)
+# is implemented by UserHasPermission
+# UserHasPermission is responsible for protecting endpoints from users
+# who don't have the permissions available as part of their plan and it also checks
+# to see if the user has sufficient API calls remaining
+
+# POST /usage/{userId} (Track API Request)
+# is implemented by GET /subscriptions/{userId}/usage (see how many requests a user has sent out for their plan, resets every new subscription)
+
+# GET /usage/{userId}/limit (Check Limit Status)
+# is implemented by GET /subscriptions/{userId}/usage (see how many requests a user has sent out for their plan, resets every new subscription)
+# is implemented by GET /subscriptions/{userId} (see what are the permissions available and their hard limits)
+
 # Random APIs (these don't do anything other than be monitored for usage)
 
 @app.get("/random1",response_description="GET random endpoint 1")  

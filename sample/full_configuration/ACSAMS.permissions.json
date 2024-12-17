@@ -1,0 +1,48 @@
+[{
+  "_id": {
+    "$oid": "675f0268f4c8101e2b024ee8"
+  },
+  "name": "RandomAPI2",
+  "endpoint": "random2",
+  "description": "RandomAPI2 description!!"
+},
+{
+  "_id": {
+    "$oid": "675f026ef4c8101e2b024ee9"
+  },
+  "name": "random3Endpoint",
+  "endpoint": "random3",
+  "description": "r3"
+},
+{
+  "_id": {
+    "$oid": "675f0274f4c8101e2b024eea"
+  },
+  "name": "random4Endpoint",
+  "endpoint": "random4",
+  "description": "r4"
+},
+{
+  "_id": {
+    "$oid": "675f027cf4c8101e2b024eeb"
+  },
+  "name": "random5Endpoint",
+  "endpoint": "random5",
+  "description": "r5"
+},
+{
+  "_id": {
+    "$oid": "675f41183e1fa86eb28327c4"
+  },
+  "name": "RandomAPI6",
+  "endpoint": "random6",
+  "description": "RandomAPI6 description :)"
+},
+{
+  "_id": {
+    "$oid": "6760fb8e00038d1379802b5e"
+  },
+  "name": "RandomAPI1",
+  "endpoint": "random1",
+  "description": "RandomAPI1 description"
+}]

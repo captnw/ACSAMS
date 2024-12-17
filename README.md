@@ -20,10 +20,10 @@ William Nguyen, Randell Lapid, and Fabrizio Mejia
 6. Go to sample and import the .json file into the same collection above
 7. Run `uvicorn app:app --reload`
 
-Note: credentials are in sample/ACAMS.user.json, they are plain-text because this is a simple project. (you can hash it yourself if you want)
+Note: credentials are in sample/minimal_configuration/ACAMS.user.json, they are plain-text because this is a simple project. (you can hash it yourself if you want)
 
 # To see API docs
 1. Navigate to `http://127.0.0.1:8000/docs` while app is running
 Note: all references to ids are MongoDB ids
 2. You can invoke public endpoints without authentication
-3. For the protected endpoints, refer to the ACSAMS.users.json for the sample credentials, you can sign in either as a user or an admin
+3. For the protected endpoints, refer to the sample/minimal_configuration/ACSAMS.users.json for the sample credentials, you can sign in either as a user or an admin
