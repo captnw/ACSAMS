@@ -5,7 +5,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from config import MONGODB_DATABASE, MONGODB_URL
 from endpoint import API_Endpoint_Enum
-from models import APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, APIPermission
+from models import APIPlan, UpdateAPIPermission, UpdateAPIPlan, UpdateAPIUsageStats, User, APIPermission
 from fastapi import HTTPException, Response, status
 from pymongo import ReturnDocument
 
@@ -265,6 +265,9 @@ async def subscribe_to_plan_in_MongoDB(plan_id : str, user : User):
         raise HTTPException(status_code=500, detail=f"Unable to subscribe user with id {user_id} to plan {plan_id}")
     
 async def view_plan_details_from_user_in_MongoDB(userId : str) -> str:
+    """
+    View plan details of a user
+    """
     # check if user is valid
     user = await get_user_by_id_from_MongoDB(userId)
     if not user:
@@ -296,6 +299,9 @@ async def view_plan_details_from_user_in_MongoDB(userId : str) -> str:
     return output
 
 async def view_usage_statistics_from_user_in_MongoDB(userId : str) -> str:
+    """
+    View usage statistics from a user
+    """
     # check if user is valid
     user = await get_user_by_id_from_MongoDB(userId)
     if not user:
@@ -327,6 +333,9 @@ async def view_usage_statistics_from_user_in_MongoDB(userId : str) -> str:
     return output
 
 async def update_user_API_usage_in_MongoDB(user : User, permission : APIPermission):
+    """
+    Update user's API usage in MongoDB
+    """
     # check if user is valid
     user = await get_user_by_id_from_MongoDB(user.id)
     if not user:
@@ -354,3 +363,57 @@ async def update_user_API_usage_in_MongoDB(user : User, permission : APIPermissi
 
     if update_result is None:
         raise HTTPException(status_code=500, detail=f"Unable to update user's API usage with user id {user_id}, permission id {permission.id}")
+    
+async def update_user_API_plan(user_id : str, plan_id : str, new_usage_stats : UpdateAPIUsageStats):
+    """
+    Update user's API usage stats or subscribed plan in MongoDB
+    """
+    # check if user is valid
+    user = await get_user_by_id_from_MongoDB(user_id)
+    if not user:
+        raise HTTPException(status_code=400, detail=f"No user with object id {user_id} exist")
+    if not user.role == "user":
+        raise HTTPException(status_code=400, detail=f"User with object id {user_id} is an Admin and cannot subscribe to plans!")
+    if not user.subscribed_plan_id:
+        raise HTTPException(status_code=400, detail=f"User with object id {user_id} is not subscribed to any plan; unable to update user API plan")
+
+    # check if planId matches user's plan
+    if user.subscribed_plan_id == plan_id:
+        # if they match, check if new_usage_stats are valid, then update
+
+        # first check that the dict is the same size
+        if not new_usage_stats.current_api_usage or len(new_usage_stats.current_api_usage) != len(user.current_api_usage):
+            raise HTTPException(status_code=400, detail=f"new_usage_stats {new_usage_stats} doesn't match size of existing usage stats {user.current_api_usage}")
+
+        # then we use a set to match the keys
+        old_permissions = set(user.current_api_usage.keys())
+        new_permissions = set(new_usage_stats.current_api_usage.keys())
+
+        if old_permissions != new_permissions:
+            raise HTTPException(status_code=400, detail=f"new_usage_stats {new_usage_stats} doesn't contain same permissions as existing usage stats {user.current_api_usage}")
+
+        # then we override the old set and update the user
+        user.current_api_usage = new_usage_stats.current_api_usage
+
+        # update the user
+        user_id = user.id
+        user = {
+            k : v for k, v in user.model_dump(by_alias=True, exclude=["id"]).items() if v is not None
+        }
+
+        # ok to update current
+        update_result = await user_collection.find_one_and_update(
+            {"_id": trycastobjectId(user_id)},
+            {"$set": user},
+            return_document=ReturnDocument.AFTER
+        )
+
+        if update_result is None:
+            raise HTTPException(status_code=500, detail=f"Unable to update user's API usage with user id {user_id}, usage stats {new_usage_stats}")
+        
+        return f"Update user {user_id}'s usage statistics {new_usage_stats}"
+    else:
+        # if planId exists, then subscribe to new plan (error handling is handled in other method)
+        await subscribe_to_plan_in_MongoDB(plan_id, user)
+
+        return f"Subscribed user {user_id} to plan {plan_id}"

@@ -9,9 +9,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from auth import create_token, authenticate_user, CheckedRoleIs, get_current_user, validate_refresh_token, refresh_tokens
 from endpoint import API_Endpoint_Enum
 from endpoint_calls import UserHasPermission
-from models import APIPermission, APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, Token  
+from models import APIPermission, APIPlan, UpdateAPIPermission, UpdateAPIPlan, UpdateAPIUsageStats, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB, subscribe_to_plan_in_MongoDB, view_plan_details_from_user_in_MongoDB, view_usage_statistics_from_user_in_MongoDB
+from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB, subscribe_to_plan_in_MongoDB, update_user_API_plan, view_plan_details_from_user_in_MongoDB, view_usage_statistics_from_user_in_MongoDB
 from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -187,6 +187,16 @@ async def view_usage_statistics(userId: str,  _: Annotated[bool, Depends(Checked
   View the usage statistics: the subscribed plan along with the permissions and the number of API calls allowed
   """
   details = await view_usage_statistics_from_user_in_MongoDB(userId)
+  return f"{details}"
+
+@app.put("/subscriptions/{userId}",
+         response_description="Assign/Modify User Plan (as an admin)",
+         status_code=status.HTTP_200_OK)
+async def update_user_plan(userId: str, _: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["admin"]))], planId: str, newUsage : UpdateAPIUsageStats = Body(...)):
+  """
+  Update the user plan as ADMIN: if the new plan is the same (by id) then just update the usage statistics, otherwise subscribe to new plan
+  """
+  details = await update_user_API_plan(userId, planId, newUsage)
   return f"{details}"
 
 # Random APIs (these don't do anything other than be monitored for usage)

@@ -45,3 +45,6 @@ class APIPlan(BaseModel):
 class UpdateAPIPlan(BaseModel):
   name: str = Field(default="RandomAPIPlan1", validate_default=True)
   apilimit : Dict[PyObjectId, Annotated[int, Field(gt=0)]] = Field(default={"permissionId":10}, validate_default=True)
+
+class UpdateAPIUsageStats(BaseModel):
+  current_api_usage : Dict[PyObjectId, Annotated[int, Field(gt=0)]] = Field(default={"permissionId":0}, validate_default=True)
