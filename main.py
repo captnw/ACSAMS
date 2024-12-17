@@ -3,12 +3,13 @@ import logging
 from typing import Annotated 
 
 from fastapi import Depends, FastAPI, HTTPException, Body, status
+from fastapi.responses import PlainTextResponse
 from fastapi.security import OAuth2PasswordRequestForm
   
 from auth import create_token, authenticate_user, CheckedRoleIs, get_current_user, validate_refresh_token, refresh_tokens
 from models import APIPermission, APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB, subscribe_to_plan_in_MongoDB
+from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB, subscribe_to_plan_in_MongoDB, view_plan_details_from_user_in_MongoDB
 from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -152,6 +153,8 @@ async def delete_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(all
   await delete_plan_in_MongoDB(planId)
   return f"Deleted Plan {planId}"
 
+# User Subscription Handling APIs
+
 @app.post("/subscriptions/",
           response_description="Subscribed to plan (as a user)",
           status_code=status.HTTP_200_OK)
@@ -161,6 +164,17 @@ async def subscribe_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(
   """
   await subscribe_to_plan_in_MongoDB(planId, current_user)
   return f"User {current_user} subscribed to plan {planId}"
+
+@app.get("/subscriptions/{userId}",
+         response_description="View Subscription Details of a user",
+         status_code=status.HTTP_200_OK,
+         response_class=PlainTextResponse)
+async def view_subscription_details(userId: str,  _: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):
+  """
+  View the subscription details: the subscribed plan along with the permissions and the number of API calls allowed
+  """
+  details = await view_plan_details_from_user_in_MongoDB(userId)
+  return f"{details}"
 
 # Random APIs (these don't do anything other than be monitored for usage)
 

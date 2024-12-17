@@ -248,3 +248,32 @@ async def subscribe_to_plan_in_MongoDB(plan_id : str, user : User):
 
     if update_result is None:
         raise HTTPException(status_code=500, detail=f"Unable to subscribe user with id {user_id} to plan {plan_id}")
+    
+async def view_plan_details_from_user_in_MongoDB(userId : str) -> str:
+    # check if user is valid
+    user = await get_user_by_id_from_MongoDB(userId)
+    if not user:
+        raise HTTPException(status_code=400, detail=f"No user with object id {userId} exist")
+
+    # check if plan is valid
+    existing_plan = await plans_collection.find_one({"_id":trycastobjectId(user.subscribed_plan_id)}) if user.subscribed_plan_id else None
+    if not existing_plan:
+        raise HTTPException(status_code=400, detail=f"No plan with object id {user.subscribed_plan_id} exist")
+    plan = APIPlan(**existing_plan)
+
+    output = "User (id: {0}) {1}; role: {2}".format(user.id, user.username, user.role)
+    output += "\nSubscribed to plan (id: {0}) {1}".format(user.subscribed_plan_id, plan.name)
+    output += "\n~~~~"
+
+    # fetch permission details
+    for permission_id, limit in plan.apilimit.items():
+        permission = await permissions_collection.find_one({"_id":trycastobjectId(permission_id)})
+        if not permission:
+            raise HTTPException(status_code=400, detail=f"Permission with id {permission_id} doesn't exist; it should not be in plan {plan.id}")
+        perm = APIPermission(**permission)
+        output += "\n"
+        output += "\nPermission (id: {0}) {1}".format(perm.id,perm.name)
+        output += "\nEndpoint: {0} API call limit: {1}".format(perm.endpoint,limit)
+        output += "\nDescription: {0}".format(perm.description)
+    
+    return output
