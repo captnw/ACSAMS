@@ -5,10 +5,10 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Body, status
 from fastapi.security import OAuth2PasswordRequestForm
   
-from auth import create_token, authenticate_user, CheckedRoleIs, validate_refresh_token, refresh_tokens
+from auth import create_token, authenticate_user, CheckedRoleIs, get_current_user, validate_refresh_token, refresh_tokens
 from models import APIPermission, APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB
+from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB, subscribe_to_plan_in_MongoDB
 from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -152,46 +152,56 @@ async def delete_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(all
   await delete_plan_in_MongoDB(planId)
   return f"Deleted Plan {planId}"
 
+@app.post("/subscriptions/",
+          response_description="Subscribed to plan (as a user)",
+          status_code=status.HTTP_200_OK)
+async def subscribe_plan(planId : str, _: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))], current_user: Annotated[User, Depends(get_current_user)]):
+  """
+  Subscribe to a plan as a user
+  """
+  await subscribe_to_plan_in_MongoDB(planId, current_user)
+  return f"User {current_user} subscribed to plan {planId}"
+
 # Random APIs (these don't do anything other than be monitored for usage)
 
 @app.get("/random1",response_description="GET random endpoint 1")  
-def get_random_1():  
+def get_random_1(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
-  The 1st random API
+  The 1st random API (users only)
   """
   return "Random 1"
 
 @app.get("/random2",response_description="GET random endpoint 2")  
-def get_random_2():  
+def get_random_2(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
-  The 2nd random API
+  The 2nd random API (users only)
   """
   return "Random 2"
 
 @app.get("/random3",response_description="GET random endpoint 3")  
-def get_random_3():  
+def get_random_3(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
-  The 3rd random API
+  The 3rd random API (users only)
   """
   return "Random 3"
 
 @app.get("/random4",response_description="GET random endpoint 4")  
-def get_random_4():  
+def get_random_4(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
-  The 4th random API
+  The 4th random API (users only)
   """
   return "Random 4"
 
 @app.get("/random5",response_description="GET random endpoint 5")  
-def get_random_5():  
+def get_random_5(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
-  The 5th random API
+  The 5th random API (users only)
   """
   return "Random 5"
 
 @app.get("/random6",response_description="GET random endpoint 6")  
-def get_random_6():  
+def get_random_6(_: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):  
   """
-  The 6th random API
+  The 6th random API (users only)
   """
   return "Random 6"

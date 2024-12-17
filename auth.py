@@ -91,7 +91,7 @@ class CheckedRoleIs:
             return True  
         raise HTTPException(  
             status_code=status.HTTP_401_UNAUTHORIZED,   
-            detail="You don't have enough permissions")  
+            detail=f"You don't have enough permissions (not one of {self.allowed_roles})")  
   
 async def validate_refresh_token(token: Annotated[str, Depends(oauth2_scheme)]):  
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")  
