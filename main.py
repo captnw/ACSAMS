@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from auth import create_token, authenticate_user, CheckedRoleIs, get_current_user, validate_refresh_token, refresh_tokens
 from models import APIPermission, APIPlan, UpdateAPIPermission, UpdateAPIPlan, User, Token  
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB, subscribe_to_plan_in_MongoDB, view_plan_details_from_user_in_MongoDB
+from mongo_driver import add_permission_to_MongoDB, add_plan_to_MongoDB, delete_permission_in_MongoDB, delete_plan_in_MongoDB, modify_permission_to_MongoDB, modify_plan_to_MongoDB, subscribe_to_plan_in_MongoDB, view_plan_details_from_user_in_MongoDB, view_usage_statistics_from_user_in_MongoDB
 from bson import ObjectId
 
 # Initialize logger (use the logger instead of print for debugging)
@@ -174,6 +174,17 @@ async def view_subscription_details(userId: str,  _: Annotated[bool, Depends(Che
   View the subscription details: the subscribed plan along with the permissions and the number of API calls allowed
   """
   details = await view_plan_details_from_user_in_MongoDB(userId)
+  return f"{details}"
+
+@app.get("/subscriptions/{userId}/usage",
+         response_description="View Usage Statistics of a user subscribed to a plan",
+         status_code=status.HTTP_200_OK,
+         response_class=PlainTextResponse)
+async def view_usage_statistics(userId: str,  _: Annotated[bool, Depends(CheckedRoleIs(allowed_roles=["user"]))]):
+  """
+  View the usage statistics: the subscribed plan along with the permissions and the number of API calls allowed
+  """
+  details = await view_usage_statistics_from_user_in_MongoDB(userId)
   return f"{details}"
 
 # Random APIs (these don't do anything other than be monitored for usage)
