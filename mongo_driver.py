@@ -173,7 +173,7 @@ async def add_plan_to_MongoDB(plan: APIPlan):
 async def get_plan_by_id_MongoDB(id: str) -> Union[APIPlan, None]:
     existing_plan = await plans_collection.find_one({"_id":trycastobjectId(id)})
     if not existing_plan:
-        raise HTTPException(status_code=400, detail=f"No plan with object id {existing_plan} exist")
+        raise HTTPException(status_code=400, detail=f"No plan with object id {id} exist")
     return APIPlan(**existing_plan)
 
 async def modify_plan_to_MongoDB(id : str, plan: UpdateAPIPlan):
@@ -325,3 +325,32 @@ async def view_usage_statistics_from_user_in_MongoDB(userId : str) -> str:
         output += "\nDescription: {0}".format(perm.description)
 
     return output
+
+async def update_user_API_usage_in_MongoDB(user : User, permission : APIPermission):
+    # check if user is valid
+    user = await get_user_by_id_from_MongoDB(user.id)
+    if not user:
+        raise HTTPException(status_code=400, detail=f"No user with object id {user.id} exist")
+    if not user.role == "user":
+        raise HTTPException(status_code=400, detail=f"User with object id {user.id} is an Admin and cannot subscribe to plans!")
+    permission_in_mongoDB = await get_permission_by_endpoint_from_MongoDB(permission.endpoint)
+    if not (permission.id in user.current_api_usage) or not (permission_in_mongoDB):
+        raise HTTPException(status_code=400, detail=f"Permission with object id {permission.id} is not a valid permission")
+
+    user.current_api_usage[permission.id] += 1
+
+    # update the user
+    user_id = user.id
+    user = {
+        k : v for k, v in user.model_dump(by_alias=True, exclude=["id"]).items() if v is not None
+    }
+
+    # ok to update current
+    update_result = await user_collection.find_one_and_update(
+        {"_id": trycastobjectId(user_id)},
+        {"$set": user},
+        return_document=ReturnDocument.AFTER
+    )
+
+    if update_result is None:
+        raise HTTPException(status_code=500, detail=f"Unable to update user's API usage with user id {user_id}, permission id {permission.id}")

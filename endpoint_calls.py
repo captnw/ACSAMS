@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException
 from auth import get_current_user
 from endpoint import API_Endpoint_Enum
 from models import User
-from mongo_driver import get_permission_by_endpoint_from_MongoDB, get_plan_by_id_MongoDB
+from mongo_driver import get_permission_by_endpoint_from_MongoDB, get_plan_by_id_MongoDB, update_user_API_usage_in_MongoDB
 
 logger = logging.getLogger('uvicorn.error')
 logger.setLevel(logging.DEBUG)
@@ -40,12 +40,14 @@ class UserHasPermission:
         # check to see if we still have enough calls remaining
         current_usage = user.current_api_usage[perm.id]
         current_plan = await get_plan_by_id_MongoDB(user.subscribed_plan_id)
+        current_limit = current_plan.apilimit[perm.id]
 
-        logger.debug(current_usage)
-        logger.debug(current_plan.apilimit[perm.id])
+        logger.debug(f"Endpoint: {perm.endpoint} Usage: {current_usage}, Remaining: {current_limit - current_usage}")
 
-        # do check here 
+        if current_usage >= current_limit:
+            raise HTTPException(status_code=400, detail=f"User has ran out of API calls for endpoint {perm.endpoint} as per the user's subscribed plan")
 
         # then increment current usage and update the user entry in mongodb
+        await update_user_API_usage_in_MongoDB(user, perm)
 
         return True
